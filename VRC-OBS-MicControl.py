@@ -251,13 +251,13 @@ def script_properties():
     mic_list = obs.obs_properties_add_list(
         props,
         "mic_source_name",
-        "麦克风源名称(OBS里显示的)",
+        "麦克风源名称",
         obs.OBS_COMBO_TYPE_LIST,
         obs.OBS_COMBO_FORMAT_STRING,
     )
     _fill_audio_sources_list(mic_list)
     obs.obs_properties_add_int(props, "listen_port", "监听端口", 1, 65535, 1)
-    obs.obs_properties_add_int(props, "debounce_ms", "防抖时间(ms)", 0, 2000, 10)
+    obs.obs_properties_add_int(props, "debounce_ms", "防抖时间（毫秒）", 0, 2000, 10)
     obs.obs_properties_add_int(props, "correction_sec", "纠偏间隔(秒)", 1, 30, 1)
 
     # 注意：obs_properties_add_bool 在 OBS Python API 里只有 3 个参数(props, name, desc)
