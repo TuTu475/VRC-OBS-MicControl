@@ -1,6 +1,7 @@
 # VRC-OBS-MicControl
 
 监听 VRChat 的 OSC 参数 `muteself`，自动控制 OBS 麦克风源静音/取消静音，并提供防抖与纠偏降低抖动与丢包影响。
+
 <img width="310" height="355" alt="screenshot" src="https://github.com/TuTu475/VRC-OBS-MicControl/blob/main/screenshot.png" />
 
 ## 功能
@@ -23,6 +24,7 @@
 - 纠偏间隔（秒，周期性校正当前状态）
 - 反向逻辑（可选）
 - 调试日志（可选）
+
 
 ## 说明
 - 监听 IP 与参数名固定：`127.0.0.1`、`muteself`
