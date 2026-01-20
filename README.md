@@ -1,7 +1,7 @@
 # VRC-OBS-MicControl
 
 监听 VRChat 的 OSC 参数 `muteself`，自动控制 OBS 麦克风源静音/取消静音。
-<img width="310" height="355" alt="image" src="https://github.com/user-attachments/assets/f7c475e0-d784-4a4d-8780-6d53dfa8b23f" />
+<img width="310" height="355" alt="image" src="[https://github.com/user-attachments/assets/f7c475e0-d784-4a4d-8780-6d53dfa8b23f](https://github.com/TuTu475/VRC-OBS-MicControl/blob/main/screenshot.png)" />
 
 ## 功能
 - 监听 VRChat OSC（默认 UDP 9001）
