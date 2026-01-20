@@ -29,7 +29,6 @@ g_sock = None
 g_pending_value = None      # 等待防抖确认的值
 g_pending_time = 0.0        # 该值的接收时间
 g_last_received_value = None
-g_last_received_time = 0.0  # 最近一次接收时间
 g_last_correction_time = 0.0
 g_last_state = None         # 上一次是否静音（True/False）
 g_enabled = True
@@ -164,7 +163,8 @@ def _fill_audio_sources_list(list_prop):
                 name = obs.obs_source_get_name(src)
                 obs.obs_property_list_add_string(list_prop, name, name)
         except Exception:
-            pass
+            if g_debug:
+                obs.script_log(obs.LOG_WARNING, "[VRC-OSC] 枚举音频源时发生异常")
     obs.source_list_release(sources)
 
 # ---------------------------
@@ -198,13 +198,14 @@ def _open_socket():
 
 
 def _tick():
-    global g_pending_value, g_pending_time, g_last_received_value, g_last_received_time, g_last_correction_time
+    global g_pending_value, g_pending_time, g_last_received_value, g_last_correction_time
     if not g_enabled:
         return
     if not g_sock:
         return
 
     now = time.time()
+    target = f"/avatar/parameters/{g_param_name}".lower()
     while True:
         try:
             data, _addr = g_sock.recvfrom(65535)
@@ -213,9 +214,6 @@ def _tick():
         except Exception as e:
             obs.script_log(obs.LOG_ERROR, f"[VRC-OSC] recv 错误：{e}")
             break
-
-        # 匹配目标参数（完全匹配）
-        target = f"/avatar/parameters/{g_param_name}".lower()
 
         for address, args in _iter_osc_messages(data):
             a = (address or "").lower()
@@ -228,7 +226,6 @@ def _tick():
                 g_pending_value = muteself
                 g_pending_time = ts
                 g_last_received_value = muteself
-                g_last_received_time = ts
 
     now = time.time()
     if g_pending_value is not None and (now - g_pending_time) >= (g_debounce_ms / 1000.0):
@@ -251,6 +248,8 @@ def script_description():
 def script_properties():
     props = obs.obs_properties_create()
     obs.obs_properties_add_bool(props, "enabled", "启用脚本")
+    obs.obs_properties_add_text(props, "listen_ip", "监听 IP", obs.OBS_TEXT_DEFAULT)
+    obs.obs_properties_add_text(props, "param_name", "参数名", obs.OBS_TEXT_DEFAULT)
     mic_list = obs.obs_properties_add_list(
         props,
         "mic_source_name",
