@@ -6,7 +6,7 @@
 # 使用：OBS -> 工具 -> 脚本 -> + -> 选择脚本文件
 #      然后在脚本里选择“麦克风源名称”，一般是“麦克风/Aux”或“Mic/Aux”
 #
-# 说明：监听IP 与 参数名默认固定；如需更改请编辑脚本里的 g_listen_ip / g_param_name
+# 说明：监听IP 与 参数名默认固定；仅端口可在设置中调整。
 
 import obspython as obs
 import socket
@@ -162,9 +162,9 @@ def _fill_audio_sources_list(list_prop):
             if (flags & obs.OBS_SOURCE_AUDIO) != 0:
                 name = obs.obs_source_get_name(src)
                 obs.obs_property_list_add_string(list_prop, name, name)
-        except Exception:
+        except Exception as e:
             if g_debug:
-                obs.script_log(obs.LOG_WARNING, "[VRC-OSC] 枚举音频源时发生异常")
+                obs.script_log(obs.LOG_WARNING, f"[VRC-OSC] 枚举音频源时发生异常：{e}")
     obs.source_list_release(sources)
 
 # ---------------------------
@@ -227,7 +227,6 @@ def _tick():
                 g_pending_time = ts
                 g_last_received_value = muteself
 
-    now = time.time()
     if g_pending_value is not None and (now - g_pending_time) >= (g_debounce_ms / 1000.0):
         _set_mic_muted(g_pending_value)
         g_pending_value = None
