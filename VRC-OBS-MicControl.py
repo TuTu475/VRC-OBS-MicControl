@@ -1,12 +1,12 @@
 # vrc_osc_muteself_to_obs.py
-# 功能：监听 VRChat OSC 输出端口(默认 9001)，检测 bool 参数 muteself
-#      muteself==True -> OBS 静音麦克风源
-#      muteself==False -> OBS 取消静音麦克风源
-#      支持防抖与定时纠偏
+# 功能：监听 VRChat 的 OSC 输出（默认 UDP 9001），读取 bool 参数 muteself
+#      muteself=True  -> OBS 麦克风源静音
+#      muteself=False -> OBS 麦克风源取消静音
+#      支持防抖与纠偏，减少抖动与丢包影响
 # 使用：OBS -> 工具 -> 脚本 -> + -> 选择脚本文件
-#      然后在脚本里选择“麦克风源名称”，一般是“麦克风/Aux”或“Mic/Aux”
+#      在脚本里选择“麦克风源名称”（常见为“麦克风/Aux”或“Mic/Aux”）
 #
-# 说明：监听IP 与 参数名默认固定；如需更改请编辑脚本里的 g_listen_ip / g_param_name
+# 说明：监听 IP 与参数名固定在脚本常量中，仅端口可在设置中调整。
 
 import obspython as obs
 import socket
@@ -29,7 +29,6 @@ g_sock = None
 g_pending_value = None      # 等待防抖确认的值
 g_pending_time = 0.0        # 该值的接收时间
 g_last_received_value = None
-g_last_received_time = 0.0  # 最近一次接收时间
 g_last_correction_time = 0.0
 g_last_state = None         # 上一次是否静音（True/False）
 g_enabled = True
@@ -163,8 +162,9 @@ def _fill_audio_sources_list(list_prop):
             if (flags & obs.OBS_SOURCE_AUDIO) != 0:
                 name = obs.obs_source_get_name(src)
                 obs.obs_property_list_add_string(list_prop, name, name)
-        except Exception:
-            pass
+        except Exception as e:
+            if g_debug:
+                obs.script_log(obs.LOG_WARNING, f"[VRC-OSC] 枚举音频源时发生异常：{e}")
     obs.source_list_release(sources)
 
 # ---------------------------
@@ -198,13 +198,14 @@ def _open_socket():
 
 
 def _tick():
-    global g_pending_value, g_pending_time, g_last_received_value, g_last_received_time, g_last_correction_time
+    global g_pending_value, g_pending_time, g_last_received_value, g_last_correction_time
     if not g_enabled:
         return
     if not g_sock:
         return
 
     now = time.time()
+    target = f"/avatar/parameters/{g_param_name}".lower()
     while True:
         try:
             data, _addr = g_sock.recvfrom(65535)
@@ -213,9 +214,6 @@ def _tick():
         except Exception as e:
             obs.script_log(obs.LOG_ERROR, f"[VRC-OSC] recv 错误：{e}")
             break
-
-        # 匹配目标参数（完全匹配）
-        target = f"/avatar/parameters/{g_param_name}".lower()
 
         for address, args in _iter_osc_messages(data):
             a = (address or "").lower()
@@ -228,9 +226,7 @@ def _tick():
                 g_pending_value = muteself
                 g_pending_time = ts
                 g_last_received_value = muteself
-                g_last_received_time = ts
 
-    now = time.time()
     if g_pending_value is not None and (now - g_pending_time) >= (g_debounce_ms / 1000.0):
         _set_mic_muted(g_pending_value)
         g_pending_value = None
@@ -245,7 +241,10 @@ def _tick():
 # ---------------------------
 
 def script_description():
-    return "监听 VRChat OSC(UDP 9001) 的 muteself 参数，自动静音/取消静音 OBS 麦克风源。"
+    return (
+        "监听 VRChat OSC(UDP 9001) 的 muteself 参数，自动静音/取消静音 OBS 麦克风源。"
+        "防抖用于过滤短时间抖动；纠偏用于周期性校正状态。"
+    )
 
 
 def script_properties():
@@ -254,13 +253,13 @@ def script_properties():
     mic_list = obs.obs_properties_add_list(
         props,
         "mic_source_name",
-        "麦克风源名称(OBS里显示的)",
+        "麦克风源名称",
         obs.OBS_COMBO_TYPE_LIST,
         obs.OBS_COMBO_FORMAT_STRING,
     )
     _fill_audio_sources_list(mic_list)
     obs.obs_properties_add_int(props, "listen_port", "监听端口", 1, 65535, 1)
-    obs.obs_properties_add_int(props, "debounce_ms", "防抖时间(ms)", 0, 2000, 10)
+    obs.obs_properties_add_int(props, "debounce_ms", "防抖时间（毫秒）", 0, 2000, 10)
     obs.obs_properties_add_int(props, "correction_sec", "纠偏间隔(秒)", 1, 30, 1)
 
     # 注意：obs_properties_add_bool 在 OBS Python API 里只有 3 个参数(props, name, desc)
@@ -271,9 +270,7 @@ def script_properties():
 
 
 def script_defaults(settings):
-    obs.obs_data_set_default_string(settings, "listen_ip", "127.0.0.1")
     obs.obs_data_set_default_int(settings, "listen_port", 9001)
-    obs.obs_data_set_default_string(settings, "param_name", "muteself")
     obs.obs_data_set_default_string(settings, "mic_source_name", "麦克风/Aux")
     obs.obs_data_set_default_bool(settings, "enabled", True)
     obs.obs_data_set_default_int(settings, "debounce_ms", 200)
@@ -283,12 +280,10 @@ def script_defaults(settings):
 
 
 def script_update(settings):
-    global g_listen_ip, g_listen_port, g_param_name, g_mic_source_name
+    global g_listen_port, g_mic_source_name
     global g_invert, g_debug, g_debounce_ms, g_correction_sec, g_enabled
 
-    g_listen_ip = obs.obs_data_get_string(settings, "listen_ip")
     g_listen_port = obs.obs_data_get_int(settings, "listen_port")
-    g_param_name = obs.obs_data_get_string(settings, "param_name")
     g_mic_source_name = obs.obs_data_get_string(settings, "mic_source_name")
     g_enabled = obs.obs_data_get_bool(settings, "enabled")
     g_debounce_ms = obs.obs_data_get_int(settings, "debounce_ms")
