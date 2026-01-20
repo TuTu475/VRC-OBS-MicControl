@@ -248,8 +248,6 @@ def script_description():
 def script_properties():
     props = obs.obs_properties_create()
     obs.obs_properties_add_bool(props, "enabled", "启用脚本")
-    obs.obs_properties_add_text(props, "listen_ip", "监听 IP", obs.OBS_TEXT_DEFAULT)
-    obs.obs_properties_add_text(props, "param_name", "参数名", obs.OBS_TEXT_DEFAULT)
     mic_list = obs.obs_properties_add_list(
         props,
         "mic_source_name",
@@ -270,9 +268,7 @@ def script_properties():
 
 
 def script_defaults(settings):
-    obs.obs_data_set_default_string(settings, "listen_ip", "127.0.0.1")
     obs.obs_data_set_default_int(settings, "listen_port", 9001)
-    obs.obs_data_set_default_string(settings, "param_name", "muteself")
     obs.obs_data_set_default_string(settings, "mic_source_name", "麦克风/Aux")
     obs.obs_data_set_default_bool(settings, "enabled", True)
     obs.obs_data_set_default_int(settings, "debounce_ms", 200)
@@ -282,12 +278,10 @@ def script_defaults(settings):
 
 
 def script_update(settings):
-    global g_listen_ip, g_listen_port, g_param_name, g_mic_source_name
+    global g_listen_port, g_mic_source_name
     global g_invert, g_debug, g_debounce_ms, g_correction_sec, g_enabled
 
-    g_listen_ip = obs.obs_data_get_string(settings, "listen_ip")
     g_listen_port = obs.obs_data_get_int(settings, "listen_port")
-    g_param_name = obs.obs_data_get_string(settings, "param_name")
     g_mic_source_name = obs.obs_data_get_string(settings, "mic_source_name")
     g_enabled = obs.obs_data_get_bool(settings, "enabled")
     g_debounce_ms = obs.obs_data_get_int(settings, "debounce_ms")
