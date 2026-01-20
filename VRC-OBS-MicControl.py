@@ -1,12 +1,12 @@
 # vrc_osc_muteself_to_obs.py
-# 功能：监听 VRChat OSC 输出端口(默认 9001)，检测 bool 参数 muteself
-#      muteself==True -> OBS 静音麦克风源
-#      muteself==False -> OBS 取消静音麦克风源
-#      支持防抖与定时纠偏
+# 功能：监听 VRChat 的 OSC 输出（默认 UDP 9001），读取 bool 参数 muteself
+#      muteself=True  -> OBS 麦克风源静音
+#      muteself=False -> OBS 麦克风源取消静音
+#      支持防抖与纠偏，减少抖动与丢包影响
 # 使用：OBS -> 工具 -> 脚本 -> + -> 选择脚本文件
-#      然后在脚本里选择“麦克风源名称”，一般是“麦克风/Aux”或“Mic/Aux”
+#      在脚本里选择“麦克风源名称”（常见为“麦克风/Aux”或“Mic/Aux”）
 #
-# 说明：监听IP 与 参数名默认固定；仅端口可在设置中调整。
+# 说明：监听 IP 与参数名固定在脚本常量中，仅端口可在设置中调整。
 
 import obspython as obs
 import socket
@@ -241,7 +241,10 @@ def _tick():
 # ---------------------------
 
 def script_description():
-    return "监听 VRChat OSC(UDP 9001) 的 muteself 参数，自动静音/取消静音 OBS 麦克风源。"
+    return (
+        "监听 VRChat OSC(UDP 9001) 的 muteself 参数，自动静音/取消静音 OBS 麦克风源。"
+        "防抖用于过滤短时间抖动；纠偏用于周期性校正状态。"
+    )
 
 
 def script_properties():
